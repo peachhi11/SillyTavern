@@ -70,7 +70,7 @@ basicAuthUser:
   username: "user"
   password: "password"
 # Enables CORS proxy middleware
-enableCorsProxy: true
+enableCorsProxy: false
 # CORS settings (applied to all routes)
 cors:
   # Enable or disable CORS middleware
@@ -82,16 +82,12 @@ cors:
   # Allowed methods
   methods:
     - "OPTIONS"
-    - "GET"
-    - "POST"
-    - "PUT"
-    - "DELETE"
   # Allowed request headers (optional)
-  allowedHeaders: [Content-Type, Authorization,custom headers]
+  allowedHeaders: []
   # Exposed response headers (optional)
   exposedHeaders: []
   # Allow credentials (cookies, authorization headers)
-  credentials: true
+  credentials: false
   # Preflight cache max age in seconds (optional)
   maxAge: null
 # -- REQUEST PROXY CONFIGURATION --
@@ -169,8 +165,6 @@ rateLimiting:
 
 ## BACKUP CONFIGURATION
 backups:
-  # Allow users to create a full backup archive of their data
-  allowFullDataBackup: true
   # Common settings for all backup types
   common:
     # Number of backups to keep for each chat and settings file
@@ -203,21 +197,11 @@ thumbnails:
 performance:
   # Enables lazy loading of character cards. Improves performances with large card libraries.
   # May have compatibility issues with some extensions.
-  lazyLoadCharacters: true
+  lazyLoadCharacters: false
   # The maximum amount of memory that parsed character cards can use. Set to 0 to disable memory caching.
-  memoryCacheCapacity: '1gb'
+  memoryCacheCapacity: '100mb'
   # Enables disk caching for character cards. Improves performances with large card libraries.
   useDiskCache: true
-  # Configures gzip compression for client requests with large payloads (e.g. settings or chat saves).
-  requestCompression:
-    # Enable request compression.
-    enabled: false
-    # Minimum payload size to trigger compression. Set to 0 to compress all requests regardless of size.
-    minPayloadSize: '256kb'
-    # Hard upper payload size limit for compression. Set to 0 to allow compression of any size.
-    maxPayloadSize: '1gb'
-    # Timeout for request compression in milliseconds.
-    timeout: 4000
 
 # CACHE BUSTER CONFIGURATION
 # IMPORTANT: Requires localhost or a domain with HTTPS, otherwise will not work!
@@ -229,24 +213,15 @@ cacheBuster:
   userAgentPattern: ''
 
 # Allow secret keys exposure via API
-allowKeysExposure: true
+allowKeysExposure: false
 # Skip new default content checks
 skipContentCheck: false
 # Allowed hosts for card downloads
 whitelistImportDomains:
   - localhost
   - cdn.discordapp.com
-  - ".files.catbox.moe"
-  - ".chub.ai"
-  - ".characterhub.org"
-  - ".githubusercontent.com"
-  - ".janitor.ai"
-  - ".character-tavern.com"
-  - ".app.wyvern.chat"
-  - ".rentry.org"
-  - ".char-archive.evulid.cc"
-  - ".realm.risuai.net"
-  - ".emochi.com"
+  - files.catbox.moe
+  - raw.githubusercontent.com
 # API request overrides (for KoboldAI and Text Completion APIs)
 ## Note: host includes the port number if it's not the default (80 or 443)
 ## Format is an array of objects:
@@ -274,13 +249,6 @@ extensions:
     embedding: Cohee/jina-embeddings-v2-base-en
     speechToText: Xenova/whisper-small
     textToSpeech: Xenova/speecht5_tts
-
-# Git backend for plugin/extension repository operations.
-# - Use "auto" to prefer system git, falling back to the integrated backend
-# - Use "system" to force system backend
-# - Use "builtin" to force integrated backend
-git:
-  backend: builtin
 
 # Additional model tokenizers can be downloaded on demand.
 # Disabling will fallback to another locally available tokenizer.
@@ -323,9 +291,9 @@ claude:
   # Use only when the prompt before the chat history is static and doesn't change between requests
   # (e.g {{random}} macro or lorebooks not as in-chat injections).
   # Otherwise, you'll just waste money on cache misses.
-  enableSystemPromptCache: true
+  enableSystemPromptCache: false
   # Enables caching of the message history at depth (if supported).
-  # https://platform.claude.com/docs/en/build-with-claude/prompt-caching
+  # https://docs.anthropic.com/en/docs/build-with-claude/prompt-caching
   # -- IMPORTANT! --
   # Use with caution. Behavior may be unpredictable and no guarantees can or will be made.
   # Set to an integer to specify the desired depth. 0 (which does NOT include the prefill)
@@ -335,11 +303,7 @@ claude:
   # Use 1h TTL instead of the default 5m.
   ## 5m: base price x 1.25
   ## 1h: base price x 2
-  extendedTTL: true
-  # Enables adaptive thinking for supported models (Opus 4.6+).
-  # Disable to enforce legacy thinking mode (with thinking budget).
-  # https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking
-  enableAdaptiveThinking: false
+  extendedTTL: false
 # -- GOOGLE GEMINI API CONFIGURATION --
 gemini:
   # API endpoint version ("v1beta" or "v1alpha")
@@ -351,12 +315,12 @@ gemini:
   # Use only when the prompt before the chat history is static and doesn't change between requests
   # (e.g {{random}} macro or lorebooks not as in-chat injections).
   # Otherwise, you'll just waste money on cache misses.
-  enableSystemPromptCache: true
+  enableSystemPromptCache: false
   # https://ai.google.dev/gemini-api/docs/imagen#imagen-configuration
   image:
     # Leave empty to use the API-default value.
     personGeneration: 'allow_adult'
 # -- SERVER PLUGIN CONFIGURATION --
-enableServerPlugins: true
+enableServerPlugins: false
 # Attempt to automatically update server plugins on startup
 enableServerPluginsAutoUpdate: true
