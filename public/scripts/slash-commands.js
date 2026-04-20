@@ -109,6 +109,8 @@ export const parser = new SlashCommandParser();
  */
 const registerSlashCommand = SlashCommandParser.addCommand.bind(SlashCommandParser);
 const getSlashCommandsHelp = parser.getHelpString.bind(parser);
+const CONNECT_API_MAP_GLOBAL_GUARD = '__st_connect_api_map_initialized__';
+const DEFAULT_SLASH_COMMANDS_GLOBAL_GUARD = '__st_default_slash_commands_initialized__';
 
 /**
  * Converts a SlashCommandClosure to a filter function that returns a boolean.
@@ -144,6 +146,11 @@ export const CONNECT_API_MAP = {};
 export const UNIQUE_APIS = [];
 
 function setupConnectAPIMap() {
+    if (globalThis[CONNECT_API_MAP_GLOBAL_GUARD]) {
+        return;
+    }
+    globalThis[CONNECT_API_MAP_GLOBAL_GUARD] = true;
+
     /** @type {Record<string, ConnectAPIMap>} */
     const result = {
         // Default APIs not contained inside text gen / chat gen
@@ -219,10 +226,15 @@ function setupConnectAPIMap() {
     }
 
     Object.assign(CONNECT_API_MAP, result);
-    UNIQUE_APIS.push(...new Set(Object.values(CONNECT_API_MAP).map(x => x.selected)));
+    UNIQUE_APIS.splice(0, UNIQUE_APIS.length, ...new Set(Object.values(CONNECT_API_MAP).map(x => x.selected)));
 }
 
 export function initDefaultSlashCommands() {
+    if (globalThis[DEFAULT_SLASH_COMMANDS_GLOBAL_GUARD]) {
+        return;
+    }
+    globalThis[DEFAULT_SLASH_COMMANDS_GLOBAL_GUARD] = true;
+
     eventSource.on(event_types.CHAT_CHANGED, processChatSlashCommands);
     setupConnectAPIMap();
 

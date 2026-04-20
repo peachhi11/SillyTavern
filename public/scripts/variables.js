@@ -18,6 +18,8 @@ import { isFalseBoolean, convertValueType, isTrueBoolean } from './utils.js';
 /** @typedef {import('./slash-commands/SlashCommand.js').UnnamedArguments} UnnamedArguments */
 
 const MAX_LOOPS = 100;
+let variableCommandsRegistered = false;
+const VARIABLE_COMMANDS_GLOBAL_GUARD = '__st_variable_commands_registered__';
 
 export function getLocalVariable(name, args = {}) {
     if (!chat_metadata.variables) {
@@ -900,6 +902,18 @@ function closureDeserializeCallback(args, value) {
 }
 
 export function registerVariableCommands() {
+    // Guard local re-entry and cross-bundle re-entry (e.g. stale duplicate startup bundles).
+    if (variableCommandsRegistered
+        || globalThis[VARIABLE_COMMANDS_GLOBAL_GUARD]
+        || Object.hasOwn(SlashCommandParser.commands, 'listvar')
+        || Object.hasOwn(SlashCommandParser.commands, 'var')) {
+        variableCommandsRegistered = true;
+        globalThis[VARIABLE_COMMANDS_GLOBAL_GUARD] = true;
+        return;
+    }
+    variableCommandsRegistered = true;
+    globalThis[VARIABLE_COMMANDS_GLOBAL_GUARD] = true;
+
     SlashCommandParser.addCommandObject(SlashCommand.fromProps({
         name: 'listvar',
         callback: listVariablesCallback,

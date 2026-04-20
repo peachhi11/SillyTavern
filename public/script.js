@@ -721,69 +721,109 @@ async function firstLoadInit() {
         overlayContent: initLoaderOverlay,
     });
 
-    registerPromptManagerMigration();
-    initDomHandlers();
-    initStandaloneMode();
-    initLibraryShims();
-    addShowdownPatch(showdown);
-    addDOMPurifyHooks();
-    reloadMarkdownProcessor();
-    applyBrowserFixes();
-    await getClientVersion();
-    await initSecrets();
-    await readSecretState();
-    await initLocales();
-    initChatUtilities();
-    initDefaultSlashCommands();
-    initTextGenModels();
-    initOpenAI();
-    initTextGenSettings();
-    initKoboldSettings();
-    initNovelAISettings();
-    initSystemPrompts();
-    initExtensions();
-    initExtensionSlashCommands();
-    ToolManager.initToolSlashCommands();
-    await initPresetManager();
-    await initSystemMessages();
-    await getSettings(initLoaderHandle);
-    initKeyboard();
-    initDynamicStyles();
-    initTags();
-    initBookmarks();
-    await getUserAvatars(true, user_avatar);
-    await getCharacters();
-    await getBackgrounds();
-    await initTokenizers();
-    initBackgrounds();
-    initAuthorsNote();
-    await initPersonas();
-    await initSlashCommandAutoComplete();
-    initMacroAutoComplete();
-    initWorldInfo();
-    initHorde();
-    initRossMods();
-    initStats();
-    initCfg();
-    initLogprobs();
-    initInputMarkdown();
-    initServerHistory();
-    initSettingsSearch();
-    initBulkEdit();
-    initReasoning();
-    initWelcomeScreen();
-    await initScrapers();
-    initCustomSelectedSamplers();
-    initDataMaid();
-    initItemizedPrompts();
-    initAccessibility();
-    initSwipePicker();
-    addDebugFunctions();
-    doDailyExtensionUpdatesCheck();
-    await eventSource.emit(event_types.APP_INITIALIZED);
-    await initLoaderHandle.hide();
-    await fixViewport();
-    await eventSource.emit(event_types.APP_READY);
+    let extensionsInitialized = false;
+    let extensionSlashCommandsInitialized = false;
+    let appEventsEmitted = false;
+
+    try {
+        registerPromptManagerMigration();
+        initDomHandlers();
+        initStandaloneMode();
+        initLibraryShims();
+        addShowdownPatch(showdown);
+        addDOMPurifyHooks();
+        reloadMarkdownProcessor();
+        applyBrowserFixes();
+        await getClientVersion();
+        await initSecrets();
+        await readSecretState();
+        await initLocales();
+        initChatUtilities();
+        initDefaultSlashCommands();
+        initTextGenModels();
+        initOpenAI();
+        initTextGenSettings();
+        initKoboldSettings();
+        initNovelAISettings();
+        initSystemPrompts();
+        await initExtensions();
+        extensionsInitialized = true;
+        initExtensionSlashCommands();
+        extensionSlashCommandsInitialized = true;
+        ToolManager.initToolSlashCommands();
+        await initPresetManager();
+        await initSystemMessages();
+        await getSettings(initLoaderHandle);
+        initKeyboard();
+        initDynamicStyles();
+        initTags();
+        initBookmarks();
+        await getUserAvatars(true, user_avatar);
+        await getCharacters();
+        await getBackgrounds();
+        await initTokenizers();
+        initBackgrounds();
+        initAuthorsNote();
+        await initPersonas();
+        await initSlashCommandAutoComplete();
+        initMacroAutoComplete();
+        initWorldInfo();
+        initHorde();
+        initRossMods();
+        initStats();
+        initCfg();
+        initLogprobs();
+        initInputMarkdown();
+        initServerHistory();
+        initSettingsSearch();
+        initBulkEdit();
+        initReasoning();
+        initWelcomeScreen();
+        await initScrapers();
+        initCustomSelectedSamplers();
+        initDataMaid();
+        initItemizedPrompts();
+        initAccessibility();
+        initSwipePicker();
+        addDebugFunctions();
+        doDailyExtensionUpdatesCheck();
+        await eventSource.emit(event_types.APP_INITIALIZED);
+        await initLoaderHandle.hide();
+        await fixViewport();
+        await eventSource.emit(event_types.APP_READY);
+        appEventsEmitted = true;
+    } catch (error) {
+        console.error('Initialization failed', error);
+        await initLoaderHandle.hide().catch(err => console.error('Failed to hide init loader after startup error', err));
+
+        if (!extensionsInitialized) {
+            try {
+                await initExtensions();
+            } catch (extError) {
+                console.error('Fallback extension init failed', extError);
+            }
+        }
+
+        if (!extensionSlashCommandsInitialized) {
+            try {
+                initExtensionSlashCommands();
+            } catch (cmdError) {
+                console.error('Fallback extension slash command init failed', cmdError);
+            }
+        }
+
+        if (!appEventsEmitted) {
+            try {
+                await eventSource.emit(event_types.APP_INITIALIZED);
+                await fixViewport();
+                await eventSource.emit(event_types.APP_READY);
+            } catch (eventError) {
+                console.error('Failed to emit startup fallback events', eventError);
+            }
+        }
+
+        toastr.error(t`Initialization completed with errors. Check console logs for details.`, t`Startup warning`, { timeOut: 10000, extendedTimeOut: 2000, preventDuplicates: true });
+    }
 }
 
 async function fixViewport() {
@@ -3677,6 +3717,22 @@ class StreamingProcessor {
         await this.onProgressStreaming(messageId, text, true);
         const messageElement = chatElement.find(`.mes[mesid="${messageId}"]`);
         const message = chat[messageId];
+
+        if (!Number.isInteger(messageId) || messageId < 0 || !message) {
+            if (unlockUI) {
+                this.markUIGenStopped();
+            }
+
+            if (this.type !== 'impersonate') {
+                console.warn(`[StreamingProcessor] Skipping post-processing for invalid message ID: ${messageId}`);
+                await eventSource.emit(event_types.MESSAGE_RECEIVED, this.messageId, this.type);
+                await eventSource.emit(event_types.CHARACTER_MESSAGE_RENDERED, this.messageId, this.type);
+            } else {
+                await eventSource.emit(event_types.IMPERSONATE_READY, text);
+            }
+            return;
+        }
+
         addCopyToCodeBlocks(messageElement);
 
         await this.reasoningHandler.finish(messageId);
@@ -9019,6 +9075,9 @@ export function callPopup(text, type, inputValue = '', { okButton, rows, wide, w
  */
 export async function updateSwipeCounter(mesId, { message = undefined, messageElement = undefined } = {}) {
     message ??= chat[mesId];
+    if (!message || typeof message !== 'object') {
+        return;
+    }
     messageElement ??= chatElement.children('.mes').filter(`[mesid="${mesId}"]`);
 
     //If the message does not have swipes, create them.

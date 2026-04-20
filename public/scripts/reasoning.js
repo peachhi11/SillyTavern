@@ -1169,9 +1169,9 @@ function setReasoningEventHandlers() {
         const mes = $(this).closest('.mes');
         const mesEditArea = mes.find('#curEditTextarea');
         if (mesEditArea.length) {
-            const summary = $(mes).find('.mes_reasoning_summary');
-            if (!summary.attr('open')) {
-                summary.find('.mes_reasoning_edit').trigger('click');
+            const details = $(mes).find('.mes_reasoning_details');
+            if (!details.prop('open')) {
+                details.find('.mes_reasoning_edit').trigger('click');
             }
         }
     });

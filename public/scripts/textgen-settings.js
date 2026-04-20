@@ -818,7 +818,12 @@ export function initTextGenSettings() {
                 : t`Banned tokens/strings are NOT being sent in the request.`);
     });
 
-    $('#koboldcpp_order').sortable({
+    const canUseSortable = typeof $.fn?.sortable === 'function';
+    if (!canUseSortable) {
+        console.warn('jQuery UI sortable is unavailable. Sampler drag-and-drop is disabled.');
+    }
+
+    if (canUseSortable) $('#koboldcpp_order').sortable({
         delay: getSortableDelay(),
         stop: function () {
             const order = [];
@@ -837,7 +842,7 @@ export function initTextGenSettings() {
         saveSettingsDebounced();
     });
 
-    $('#llamacpp_samplers_sortable').sortable({
+    if (canUseSortable) $('#llamacpp_samplers_sortable').sortable({
         delay: getSortableDelay(),
         stop: function () {
             const order = [];
@@ -857,7 +862,7 @@ export function initTextGenSettings() {
         saveSettingsDebounced();
     });
 
-    $('#sampler_priority_container').sortable({
+    if (canUseSortable) $('#sampler_priority_container').sortable({
         delay: getSortableDelay(),
         stop: function () {
             const order = [];
@@ -870,7 +875,7 @@ export function initTextGenSettings() {
         },
     });
 
-    $('#sampler_priority_container_aphrodite').sortable({
+    if (canUseSortable) $('#sampler_priority_container_aphrodite').sortable({
         delay: getSortableDelay(),
         stop: function () {
             const order = [];

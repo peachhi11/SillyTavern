@@ -34,7 +34,7 @@ const observer = new MutationObserver(mutations => {
  */
 function applyDynamicFocusStyles(styleSheet, { fromExtension = false } = {}) {
     /** @typedef {{ type: 'media'|'supports'|'container', conditionText: string }} WrapperCond */
-    /** @type {{baseSelector: string, rule: CSSStyleRule, wrappers: WrapperCond[]}[]} */
+    /** @type {{selector: string, baseSelector: string, rule: CSSStyleRule, wrappers: WrapperCond[]}[]} */
     const hoverRules = [];
     /** @type {Set<string>} */
     const focusRules = new Set();
@@ -75,7 +75,7 @@ function applyDynamicFocusStyles(styleSheet, { fromExtension = false } = {}) {
                         // We currently do nothing here. Rules containing both hover and focus are very specific and should never be automatically touched
                     } else if (isHover) {
                         const baseSelector = selector.replace(/:hover/g, PLACEHOLDER).trim();
-                        hoverRules.push({ baseSelector, rule, wrappers: [...wrappers] });
+                        hoverRules.push({ selector, baseSelector, rule, wrappers: [...wrappers] });
                     } else if (isFocus) {
                         // We need to make sure that we remember all existing :focus, :focus-within and :focus-visible rules
                         const baseSelector = selector.replace(/:focus(-within|-visible)?/g, PLACEHOLDER).trim();
@@ -114,7 +114,7 @@ function applyDynamicFocusStyles(styleSheet, { fromExtension = false } = {}) {
     let targetStyleSheet = null;
 
     // Now finally create the dynamic focus rules
-    hoverRules.forEach(({ baseSelector, rule, wrappers }) => {
+    hoverRules.forEach(({ selector, baseSelector, rule, wrappers }) => {
         if (!focusRules.has(`${baseSelector}|${wrapperSignature(wrappers)}`)) {
             // Only initialize the dynamic stylesheet if needed
             targetStyleSheet ??= getDynamicStyleSheet({ fromExtension });
@@ -125,7 +125,15 @@ function applyDynamicFocusStyles(styleSheet, { fromExtension = false } = {}) {
             // :focus-visible counterpart, which will make the styling work the same for keyboard and mouse.
             // If something like :focus-within or a more specific selector like `.blah:has(:focus-visible)` for elements inside,
             // it should be manually defined in CSS.
-            const focusSelector = rule.selectorText.replace(/:hover/g, ':focus-visible');
+            // Generate the focus selector from the single matched selector, not the full selector list.
+            let focusSelector = selector.replace(/:hover/g, ':focus-visible');
+            // If :hover appeared on a pseudo-element (e.g. ::-webkit-scrollbar-track:hover),
+            // move :focus-visible in front of the pseudo-element when possible.
+            focusSelector = focusSelector.replace(/(::[-\w]+(?:\([^)]*\))?):focus-visible/g, ':focus-visible$1');
+            // Skip selectors that are still invalid for keyboard focus generation.
+            if (/::[-\w]+(?:\([^)]*\))?:focus-visible/.test(focusSelector) || /^:focus-visible::/.test(focusSelector)) {
+                return;
+            }
             let focusRule = `${focusSelector} { ${rule.style.cssText} }`;
 
             // Wrap the generated rule into the same @media/@supports/@container chain (if any)

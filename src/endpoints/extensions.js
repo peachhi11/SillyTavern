@@ -428,24 +428,33 @@ router.get('/discover', function (request, response) {
         fs.mkdirSync(PUBLIC_DIRECTORIES.globalExtensions);
     }
 
-    // Get all folders in system extensions folder, excluding third-party
+    const hasManifest = (basePath, folder) => {
+        const manifestPath = path.join(basePath, folder, 'manifest.json');
+        return fs.existsSync(manifestPath) && fs.statSync(manifestPath).isFile();
+    };
+
+    // Get all folders in system extensions folder, excluding third-party.
+    // Only expose extensions that have a manifest to avoid client-side 404 noise.
     const builtInExtensions = fs
         .readdirSync(PUBLIC_DIRECTORIES.extensions)
         .filter(f => fs.statSync(path.join(PUBLIC_DIRECTORIES.extensions, f)).isDirectory())
         .filter(f => f !== 'third-party')
+        .filter(f => hasManifest(PUBLIC_DIRECTORIES.extensions, f))
         .map(f => ({ type: 'system', name: f }));
 
-    // Get all folders in local extensions folder
+    // Get all folders in local extensions folder with a manifest.
     const userExtensions = fs
         .readdirSync(path.join(request.user.directories.extensions))
         .filter(f => fs.statSync(path.join(request.user.directories.extensions, f)).isDirectory())
+        .filter(f => hasManifest(request.user.directories.extensions, f))
         .map(f => ({ type: 'local', name: `third-party/${f}` }));
 
     // Get all folders in global extensions folder
-    // In case of a conflict, the extension will be loaded from the user folder
+    // In case of a conflict, the extension will be loaded from the user folder.
     const globalExtensions = fs
         .readdirSync(PUBLIC_DIRECTORIES.globalExtensions)
         .filter(f => fs.statSync(path.join(PUBLIC_DIRECTORIES.globalExtensions, f)).isDirectory())
+        .filter(f => hasManifest(PUBLIC_DIRECTORIES.globalExtensions, f))
         .map(f => ({ type: 'global', name: `third-party/${f}` }))
         .filter(f => !userExtensions.some(e => e.name === f.name));
 

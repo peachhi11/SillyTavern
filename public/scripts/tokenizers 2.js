@@ -794,6 +794,24 @@ export function getTokenizerModel() {
 export function countTokensOpenAI(messages, full = false) {
     const tokenizerEndpoint = `/api/tokenizers/openai/count?model=${getTokenizerModel()}`;
     const cacheObject = getTokenCacheObject();
+    const getApproximateCount = (message) => {
+        if (typeof message === 'string') {
+            return guesstimate(message);
+        }
+
+        if (typeof message?.content === 'string') {
+            return guesstimate(message.content);
+        }
+
+        if (Array.isArray(message?.content)) {
+            const contentText = message.content
+                .map(part => typeof part?.text === 'string' ? part.text : '')
+                .join('\n');
+            return guesstimate(contentText);
+        }
+
+        return guesstimate(JSON.stringify(message ?? ''));
+    };
 
     if (!Array.isArray(messages)) {
         messages = [messages];
@@ -817,16 +835,23 @@ export function countTokensOpenAI(messages, full = false) {
         }
 
         else {
+            const approximateCount = getApproximateCount(message);
+            token_count += approximateCount;
+            cacheObject[cacheKey] = approximateCount;
+
+            // Keep deprecated sync API non-blocking: update cache with precise count asynchronously.
             jQuery.ajax({
-                async: false,
+                async: true,
                 type: 'POST', //
                 url: tokenizerEndpoint,
                 data: JSON.stringify([message]),
                 dataType: 'json',
                 contentType: 'application/json',
                 success: function (data) {
-                    token_count += Number(data.token_count);
-                    cacheObject[cacheKey] = Number(data.token_count);
+                    const exactCount = Number(data.token_count);
+                    if (!Number.isNaN(exactCount)) {
+                        cacheObject[cacheKey] = exactCount;
+                    }
                 },
             });
         }
@@ -1232,4 +1257,3 @@ export async function initTokenizers() {
     await loadTokenCache();
     registerDebugFunction('resetTokenCache', 'Reset token cache', 'Purges the calculated token counts. Use this if you want to force a full re-tokenization of all chats or suspect the token counts are wrong.', resetTokenCache);
 }
-
