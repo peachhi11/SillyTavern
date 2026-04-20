@@ -25,6 +25,13 @@ export function displayLogitBias(logitBias, containerSelector) {
         }
     }
 
+    const canUseSortable = typeof list.sortable === 'function';
+    if (!canUseSortable) {
+        console.warn('jQuery UI sortable is unavailable; logit bias list drag-reorder is disabled.');
+        BIAS_CACHE.delete(containerSelector);
+        return;
+    }
+
     // Check if a sortable instance exists
     if (list.sortable('instance') !== undefined) {
         // Destroy the instance

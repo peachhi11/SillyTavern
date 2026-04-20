@@ -666,6 +666,55 @@ $.ajaxPrefilter((options, originalOptions, xhr) => {
     xhr.setRequestHeader('X-CSRF-Token', token);
 });
 
+let jqueryUiRecoveryPromise = null;
+
+function hasJqueryUiSortable() {
+    return typeof globalThis?.jQuery?.fn?.sortable === 'function';
+}
+
+function injectClassicScript(src) {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = false;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+        document.head.appendChild(script);
+    });
+}
+
+async function ensureJqueryUiSortable() {
+    if (hasJqueryUiSortable()) {
+        return true;
+    }
+
+    if (!jqueryUiRecoveryPromise) {
+        jqueryUiRecoveryPromise = (async () => {
+            console.warn('jQuery UI sortable is unavailable. Attempting runtime recovery.');
+
+            await injectClassicScript(`/lib/jquery-ui.min.js?recover=${Date.now()}`);
+
+            if (!hasJqueryUiSortable()) {
+                throw new Error('jQuery UI sortable is still unavailable after reload.');
+            }
+
+            // Optional helper for touch drag support; keep non-fatal.
+            try {
+                await injectClassicScript(`/lib/jquery.ui.touch-punch.min.js?recover=${Date.now()}`);
+            } catch (error) {
+                console.warn('jQuery UI Touch Punch reload failed. Touch drag support may be limited.', error);
+            }
+
+            return true;
+        })().catch((error) => {
+            console.error('Failed to recover jQuery UI sortable.', error);
+            return false;
+        });
+    }
+
+    return await jqueryUiRecoveryPromise;
+}
+
 /**
  * Pings the STserver to check if it is reachable.
  * @returns {Promise<boolean>} True if the server is reachable, false otherwise.
@@ -742,6 +791,7 @@ async function firstLoadInit() {
         initDefaultSlashCommands();
         initTextGenModels();
         initOpenAI();
+        await ensureJqueryUiSortable();
         initTextGenSettings();
         initKoboldSettings();
         initNovelAISettings();

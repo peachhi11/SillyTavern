@@ -449,6 +449,11 @@ export async function getStatusKobold() {
 }
 
 export function initKoboldSettings() {
+    const canUseSortable = typeof $.fn?.sortable === 'function';
+    if (!canUseSortable) {
+        console.warn('jQuery UI sortable is unavailable. Kobold sampler drag-and-drop is disabled.');
+    }
+
     sliders.forEach(slider => {
         $(document).on('input', slider.sliderId, function () {
             const value = $(this).val();
@@ -488,7 +493,7 @@ export function initKoboldSettings() {
         saveSettingsDebounced();
     });
 
-    $('#kobold_order').sortable({
+    if (canUseSortable) $('#kobold_order').sortable({
         delay: getSortableDelay(),
         stop: function () {
             const order = [];
@@ -515,18 +520,16 @@ export function initKoboldSettings() {
             setGenerationParamsFromPreset(preset);
             $('#kobold_api-settings').find('input').prop('disabled', false);
             $('#kobold_api-settings').css('opacity', 1.0);
-            $('#kobold_order')
-                .css('opacity', 1)
-                .sortable('enable');
+            const orderEl = $('#kobold_order').css('opacity', 1);
+            if (canUseSortable) orderEl.sortable('enable');
         } else {
             kai_settings.preset_settings = 'gui';
 
             $('#kobold_api-settings').find('input').prop('disabled', true);
             $('#kobold_api-settings').css('opacity', 0.5);
 
-            $('#kobold_order')
-                .css('opacity', 0.5)
-                .sortable('disable');
+            const orderEl = $('#kobold_order').css('opacity', 0.5);
+            if (canUseSortable) orderEl.sortable('disable');
         }
         saveSettingsDebounced();
         await eventSource.emit(event_types.PRESET_CHANGED, { apiId: 'kobold', name: kai_settings.preset_settings });

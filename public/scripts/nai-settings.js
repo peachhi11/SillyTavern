@@ -859,6 +859,11 @@ export async function getStatusNovel() {
 }
 
 export function initNovelAISettings() {
+    const canUseSortable = typeof $.fn?.sortable === 'function';
+    if (!canUseSortable) {
+        console.warn('jQuery UI sortable is unavailable. Novel sampler drag-and-drop is disabled.');
+    }
+
     sliders.forEach(slider => {
         $(document).on('input', slider.sliderId, function () {
             const value = $(this).val();
@@ -921,7 +926,7 @@ export function initNovelAISettings() {
         saveSettingsDebounced();
     });
 
-    $('#novel_order').sortable({
+    if (canUseSortable) $('#novel_order').sortable({
         delay: getSortableDelay(),
         stop: saveSamplingOrder,
     });
