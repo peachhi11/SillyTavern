@@ -4389,6 +4389,14 @@ function onLogitBiasPresetChange() {
         }
     }
 
+    const canUseSortable = typeof list.sortable === 'function';
+    if (!canUseSortable) {
+        console.warn('jQuery UI sortable is unavailable. OpenAI logit bias drag-reorder is disabled.');
+        biasCache = undefined;
+        saveSettingsDebounced();
+        return;
+    }
+
     // Check if a sortable instance exists
     if (list.sortable('instance') !== undefined) {
         // Destroy the instance

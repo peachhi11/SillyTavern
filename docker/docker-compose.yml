@@ -9,7 +9,7 @@ services:
       - FORCE_COLOR=1
       - SILLYTAVERN_HEARTBEATINTERVAL=30
     ports:
-      - "8000:8000"
+      - "8081:8000"
     volumes:
       - "./config:/home/node/app/config"
       - "./data:/home/node/app/data"
